@@ -1,0 +1,40 @@
+{
+  "sat_resolution_meter":{
+      "TERRA": 1000.0,
+      "AQUA": 1000.0,
+      "Terra": 1000.0,
+      "Aqua": 1000.0,
+      "Himawari-8/9": 2200.0,
+      "NPP": 750.0,
+      "NOAA20": 750.0,
+      "NPP_LATE": 750.0,
+      "JP1_LATE": 750.0,
+      "description": "Resolution of radiometer"
+  },
+  "parameters": {
+    "clipping_box": [90, 145, -15, 30],
+    "clipping-box-description": "Bounding box for hotspots",
+    "gamma": 2,
+    "gamma-description": "Non-linear scaling parameters. y = x ** (1/gamma)",
+    "low_prob_thres": 0.5,
+    "med_prob_thres": 0.75,
+    "prob-description": "Thresholds for probabilities. Hotspot below low prob will not be displayed in .ann file"
+  },
+  "shapefile": {
+    "path": "../references/shapefile/GADM_Simplified_ASMC_ASEAN_v2.2c.shp",
+    "description": "Shapefile for plotting"
+  },
+  "plotting": {
+    "bounding_box": [90, 130, -15, 30],
+    "dpi": 300,
+    "description": "lon_min, lon_max, lat_min, lat_max"
+  },
+  "model": {
+    "path": "../models/logit_reg_alpha_sep_0.7_sg_angle_12.sav",
+    "description": "Sav file of sklearn trained Linear Logistic Regression model"
+  }
+}
+
+
+
+
