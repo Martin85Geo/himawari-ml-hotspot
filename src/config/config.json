@@ -4,7 +4,7 @@
       "AQUA": 1000.0,
       "Terra": 1000.0,
       "Aqua": 1000.0,
-      "Himawari-8/9": 2200.0,
+      "Himawari-8/9": 2000.0,
       "NPP": 750.0,
       "NOAA20": 750.0,
       "NPP_LATE": 750.0,
@@ -14,10 +14,8 @@
   "parameters": {
     "clipping_box": [90, 145, -15, 30],
     "clipping-box-description": "Bounding box for hotspots",
-    "gamma": 2,
-    "gamma-description": "Non-linear scaling parameters. y = x ** (1/gamma)",
-    "low_prob_thres": 0.5,
-    "med_prob_thres": 0.75,
+    "low_prob_thres": 0.4,
+    "med_prob_thres": 0.6,
     "prob-description": "Thresholds for probabilities. Hotspot below low prob will not be displayed in .ann file"
   },
   "shapefile": {
@@ -29,9 +27,15 @@
     "dpi": 300,
     "description": "lon_min, lon_max, lat_min, lat_max"
   },
-  "model": {
-    "path": "../models/logit_reg_alpha_sep_0.7_sg_angle_12.sav",
-    "description": "Sav file of sklearn trained Linear Logistic Regression model"
+  "fusiun_ml_model": {
+    "path": "../models/fusiun_lr_best_pipe_sklearn_0.22.sav",
+    "predict_features": ["terra_weight", "n20_weight", "aqua_weight", "npp_weight", "geo_weight"],
+    "description": "Sav file of sklearn trained Logistic Regression model for FUSIUN"
+  },
+  "h8_ml_model": {
+    "path": "../models/h8_gradientboosting_best_pipe_sklearn_0.22.sav",
+    "predict_features": ["t07", "t14", "t07_t14", "meant07", "meant14", "meandt", "sdt07", "sdt14", "sddt", "ref3", "ref4", "sunglint_angle"],
+    "description": "Sav file of sklearn trained Gradient Boosting model for Himawari-8 ML hotspot"
   }
 }
 

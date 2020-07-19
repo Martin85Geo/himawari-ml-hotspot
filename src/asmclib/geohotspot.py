@@ -190,40 +190,36 @@ class GeoHotspot:
 
     def parse_jaxa_hotspot_txt(self, file_path):
         """
-        Parse the JAXA Himawari-8/9 AHI hotspot text and insert into the Pandas DataFrame
-        with coordinates, fire radiative power, detection confidence, timestamp and satellite of hotspots.
+        Parse the JAXA Himawari-8/9 AHI hotspot text file and insert attrs into the Pandas DataFrame
 
         Args:
-              file_path (str): File path to the JAXA Himawari-8/9 hotspot .csv
+            file_path (str): File path to the JAXA Himawari-8/9 hotspot .csv
+
+        Returns:
+            hs_df (obj): DataFrame obj that contains attr of Himawari-8/9 hospot
         """
         hs_ahi_df = pd.DataFrame()
-        cols_to_use_list = [0, 2, 7, 8, 9, 10]
+        cols_to_use_list = [0, 2, *(i for i in range(7, 24))]
         date_col_list = [0]
-
-        # load the txt file
-        log.debug("searching for " + file_path)
+        names_list = ['date', 'satellite', 'lon', 'lat', 'viewzenang', 'viewazang', 'pixwid', 'pixlen', 't07',
+                      't14', 't07_t14', 'meant07', 'meant14', 'meandt', 'sdt07', 'sdt14', 'sddt',
+                      'ref3', 'ref4']
 
         for file in glob.glob(file_path):
             try:
-                f = open(file, "r")
-                filename = os.path.basename(file)
-                log.debug(file + " text succesfully opened.")
+                log.debug(f'Reading {file}')
+                temp_hs_ahi_df = pd.read_csv(file, sep=",", skiprows=[0], \
+                                             header=None, usecols=cols_to_use_list, \
+                                             names=names_list, \
+                                             parse_dates=date_col_list)
+                temp_hs_ahi_df['satellite'] = 'Himawari-8/9'
             except Exception as e:
-                log.exception(e)
-                log.debug(file_path + " not found.")
-
-            temp_hs_ahi_df = pd.read_csv(file, sep=",", skiprows=[0], \
-                                         header=None, usecols=cols_to_use_list, \
-                                         names=['date', 'satellite', 'lon', 'lat', 'viewzenang', 'viewazang'], \
-                                         parse_dates=date_col_list)
-
-            temp_hs_ahi_df['confidence'] = 'NA'
-            temp_hs_ahi_df['FRP'] = 'NA'
-            temp_hs_ahi_df['satellite'] = 'Himawari-8/9'
+                log.error(f'Error reading {file}')
+                log.error(e)
+                continue
 
             if len(temp_hs_ahi_df) > 0:
                 try:
-                    log.debug("Compute solar azimuth and zenith angle, and relative zenith angle.")
                     temp_hs_ahi_df['solarazang'] = temp_hs_ahi_df.apply( \
                         lambda x: np.degrees(astronomy.get_alt_az(x['date'], x['lon'], x['lat'])[1]), axis=1)
                     temp_hs_ahi_df['solarzenang'] = temp_hs_ahi_df.apply( \
@@ -231,8 +227,7 @@ class GeoHotspot:
                     temp_hs_ahi_df['relazang'] = temp_hs_ahi_df['solarazang'] - temp_hs_ahi_df['viewazang']
                     temp_hs_ahi_df['sunglint_angle'] = temp_hs_ahi_df.apply(compute_sun_glint_angle, axis=1)
                 except Exception as e:
-                    log.warning("Unable to compute solar azimuth and zenith angle, and relative zenith angle.")
-                    log.exception(e)
+                    temp_hs_ahi_df['sunglint_angle'] = np.nan
 
                 try:
                     temp_hs_ahi_df.loc[(temp_hs_ahi_df['date'].dt.hour >= 0) \
@@ -242,9 +237,7 @@ class GeoHotspot:
                     temp_hs_ahi_df['date'] = temp_hs_ahi_df['date'].dt.strftime( \
                         "%d/%m/%Y %H:%M:%S")
                 except Exception as e:
-                    log.warning("Warning encountered parsing date from %s." % file)
                     date_from_file = datetime.strptime(filename[4:17], "%Y%m%d_%H%M")
-                    log.warning("Parse date from filename instead. %s" % date_from_file)
                     temp_hs_ahi_df['date'] = date_from_file.strftime("%d/%m/%Y %H:%M:%S")
 
             hs_ahi_df = pd.concat([hs_ahi_df, temp_hs_ahi_df])
@@ -355,7 +348,7 @@ class GeoHotspot:
 
         self.hs_df = pd.concat([hs_viirs_df, self.hs_df])
 
-    def get_hs_from_csv_db(self, file_path, sat_name, date_start, date_end, convert_to_utc=True):
+    def get_hs_from_csv_db(self, file_path, sat_name, convert_to_utc=True):
         """
         Reader of .csv db exported by Microsoft Access
         List of headers:
@@ -373,6 +366,11 @@ class GeoHotspot:
         cols_to_use_list = [1, 2, 3, 4, 5, 6, 7]
         date_col_list = [1]
 
+        if sat_name == 'JP1_LATE':
+            dateparse = lambda x: pd.datetime.strptime(x, '%d/%m/%Y %H:%M:%S')
+        elif sat_name == 'NPP_LATE':
+            dateparse = lambda x: pd.datetime.strptime(x, '%d/%m/%Y %H:%M')
+
         # load the txt file
         log.debug("searching for " + file_path)
 
@@ -386,12 +384,11 @@ class GeoHotspot:
             # parse through content of txt file
             temp_hs_df = pd.read_csv(file, sep=",", header=0, usecols=cols_to_use_list, \
                                      names=['satellite', 'date', 'lat', 'lon', 'FRP', 'confidence', 'daynight'], \
-                                     parse_dates=date_col_list, infer_datetime_format=True)
+                                     parse_dates=date_col_list, infer_datetime_format=False, date_parser=dateparse)
 
             if convert_to_utc:
                 temp_hs_df['date'] = temp_hs_df['date'] - timedelta(hours=8)
 
-            temp_hs_df = temp_hs_df[(temp_hs_df['date'] >= date_start) & (temp_hs_df['date'] <= date_end)]
             temp_hs_df['date'] = temp_hs_df['date'].dt.strftime("%d/%m/%Y %H:%M:%S")
             temp_hs_df = temp_hs_df[temp_hs_df['satellite'] == sat_name]
 

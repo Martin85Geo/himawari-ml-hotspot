@@ -90,3 +90,6 @@ target/
 
 # Mypy cache
 .mypy_cache/
+
+# Template README
+README.md.template
